@@ -29,3 +29,13 @@ If you want to install <b>manually</b>:
 git clone 'https://github.com/willdoesprojects/BunAI.git' ~/.local/share/Anki2/addons21/BunAI
 ```
 ***Note: This command works only of MacOS/Linux***
+
+## License and Credits
+
+*BunAI* is *Copyright © 2025 [William N.] (willdoesprojects)*
+
+***NOTICE: WE ARE NOT LIABLE FOR ANY DAMAGES THAT MAY OCCUR***
+
+This Add-On was created soley by me, myself. I just wanted a tool to help me create sentences for my Japanese Learning journey.
+
+If you have any questions, problems, or bugs to report feel free to ask! Thank you for using my add-on!
