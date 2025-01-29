@@ -1,3 +1,34 @@
+# -*- coding: utf-8 -*-
+
+# BunAI 
+#
+# Copyright (C) 2025  William N. (willdoesprojects)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version, with the additions
+# listed at the end of the accompanied license file.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# NOTE: This program is subject to certain additional terms pursuant to
+# Section 7 of the GNU Affero General Public License.  You should have
+# received a copy of these additional terms immediately following the
+# terms and conditions of the GNU Affero General Public License which
+# accompanied this program.
+#
+# If not, please request a copy through one of the means of contact
+# listed here: <https://github.com/willdoesprojects>.
+#
+# Any modifications to this file must keep this entire header intact.
+
 from aqt import mw
 from aqt.qt import (QSettings, QAction, QWidget, QTabWidget, QVBoxLayout, 
                     QLabel, QPushButton, QHBoxLayout, QLineEdit, QDialog, 
@@ -18,6 +49,12 @@ class BunAI:
             self.menu_action.triggered.connect(self.setup)
             mw.form.menuTools.addAction(self.menu_action)
 
+            self.deck = self.settings.value("deck", "")
+
+            self.sentence_field = self.settings.value(f"{self.deck}_sentence_field", "")
+            self.translation_field = self.settings.value(f"{self.deck}_translation_field", "")
+            self.diffculty = self.settings.value(f"{self.deck}_diffculty_field", "")
+            self.language = self.settings.value("language", "")
     def setup(self) -> None:
         # Tab Section
         tab_widget = QTabWidget()
@@ -47,7 +84,6 @@ class BunAI:
             self.general_layout.addWidget(QLabel("Welcome to Bun AI!"))
             deck_dropdown, _ = self.create_dropdown_menu("Deck:", deck_names, self.general_layout)
             deck_dropdown.currentTextChanged.connect(self.handle_selection) 
-            self.deck = self.settings.value("deck", "")
 
             deck_id = mw.col.decks.id(deck_names[0])
             card_ids = mw.col.decks.cids(deck_id)
@@ -62,26 +98,11 @@ class BunAI:
             self.sentence_dropdown, self.sentence_layout = self.create_dropdown_menu("Sentence Field:", fields, self.general_layout)
             self.translation_dropdown, self.translation_layout = self.create_dropdown_menu("Translation Field:", fields, self.general_layout)
 
-            self.sentence_dropdown.currentTextChanged.connect(self.set_sentence)
-            self.translation_dropdown.currentTextChanged.connect(self.set_translation)
-
-            # Setting the Fields
-            self.sentence_field = self.settings.value(f"{self.deck}_sentence_field", "")
-            self.translation_field = self.settings.value(f"{self.deck}_translation_field", "")
-            self.diffculty = self.settings.value(f"{self.deck}_diffculty_field", "")
-            
-
             # Diffculty Mode
             mode = ["Beginner", "Normal", "Complex"] 
+            
             self.diffculty_mode_dropdown, _ = self.create_dropdown_menu("Diffculty Setting:", mode, self.general_layout)
-            self.diffculty_mode_dropdown.currentTextChanged.connect(self.set_diffculty)
-
-            # Button to Generate Sentences
-            generate_button = QPushButton("Generate Sentences!")
-            generate_button.clicked.connect(self.popup_generate_window)
-
-            self.general_layout.addWidget(generate_button)
-
+            
             # Preselecting the option from user's last session
 
             deck_index = deck_dropdown.findText(self.deck)
@@ -99,6 +120,18 @@ class BunAI:
             diffculty_index = self.diffculty_mode_dropdown.findText(self.diffculty)
             if diffculty_index != -1:
                 self.diffculty_mode_dropdown.setCurrentIndex(diffculty_index)
+
+            # Connect the Dropdown Menus
+
+            self.sentence_dropdown.currentTextChanged.connect(self.set_sentence)
+            self.translation_dropdown.currentTextChanged.connect(self.set_translation)
+            self.diffculty_mode_dropdown.currentTextChanged.connect(self.set_diffculty)
+
+            # Button to Generate Sentences
+            generate_button = QPushButton("Generate Sentences!")
+            generate_button.clicked.connect(self.popup_generate_window)
+
+            self.general_layout.addWidget(generate_button)
         
         """ Advanced Tab """
 
@@ -130,9 +163,6 @@ class BunAI:
         language_layout = QHBoxLayout()
         language_label = QLabel("Language: ")
         language_layout.addWidget(language_label)
-
-        # Language Prompt
-        self.language = self.settings.value("language", "")
 
         self.language_input_field = QLineEdit()
         self.language_input_field.setPlaceholderText("Enter desired Language!")
@@ -254,10 +284,10 @@ class BunAI:
             if curr == 15:
                 break
             curr += 1
-            # if not note[self.sentence_field] or not note[self.translation_field]:
-            #     notes.append(note)
-            from anki.notes import Note
-            mw.col.update_note(note)
+
+            if not note[self.sentence_field] and not note[self.translation_field]:
+                notes.append(note)
+
         total_cards = len(notes)
         """ Frontend Side """
         # Creation & Intialization of Popup Window for Generating Sentences
