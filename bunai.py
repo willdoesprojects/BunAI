@@ -109,12 +109,13 @@ class BunAI:
             # Preselection of Fields from Previous Sessions
             sentence_index = sentence_dropdown.findText(self.sentence_field)
             if sentence_index == -1:
-                sentence_index = 0
+                sentence_index = 1
+
             sentence_dropdown.setCurrentIndex(sentence_index)
 
             translation_index = translation_dropdown.findText(self.translation_field)
             if translation_index == -1:
-                translation_index = 0
+                translation_index = 1
             translation_dropdown.setCurrentIndex(translation_index)
 
             # Creation Diffuclty Dropdowns
@@ -140,7 +141,7 @@ class BunAI:
             self.general_layout.addWidget(generate_button)
         
         """ Advanced Tab """
-        
+
         # Intialize Advanced Tab & Layout
         advanced_tab = QWidget()
         self.advanced_layout = QVBoxLayout()
@@ -247,12 +248,12 @@ class BunAI:
 
         sentence_index = sentence_dropdown.findText(self.sentence_field)
         if sentence_index == -1:
-            sentence_index = 0
+            sentence_index = 1
         sentence_dropdown.setCurrentIndex(sentence_index)
 
         translation_index = translation_dropdown.findText(self.translation_field)
         if translation_index == -1:
-            translation_index = 0
+            translation_index = 1
         translation_dropdown.setCurrentIndex(translation_index)
 
     def clear_layout(self) -> None:
