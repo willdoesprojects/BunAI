@@ -106,13 +106,16 @@ class BunAI:
             self.sentence_field = self.settings.value(f"{self.deck}_sentence_field", "")
             self.translation_field = self.settings.value(f"{self.deck}_translation_field", "")
 
+            # Preselection of Fields from Previous Sessions
             sentence_index = sentence_dropdown.findText(self.sentence_field)
-            if sentence_index != -1:
-                sentence_dropdown.setCurrentIndex(sentence_index)
+            if sentence_index == -1:
+                sentence_index = 0
+            sentence_dropdown.setCurrentIndex(sentence_index)
 
             translation_index = translation_dropdown.findText(self.translation_field)
-            if translation_index != -1:
-                translation_dropdown.setCurrentIndex(translation_index)
+            if translation_index == -1:
+                translation_index = 0
+            translation_dropdown.setCurrentIndex(translation_index)
 
             # Creation Diffuclty Dropdowns
             mode = ["Beginner", "Normal", "Complex"] 
@@ -137,7 +140,7 @@ class BunAI:
             self.general_layout.addWidget(generate_button)
         
         """ Advanced Tab """
-
+        
         # Intialize Advanced Tab & Layout
         advanced_tab = QWidget()
         self.advanced_layout = QVBoxLayout()
@@ -243,12 +246,14 @@ class BunAI:
         self.translation_field = self.settings.value(f"{self.deck}_translation_field", "")
 
         sentence_index = sentence_dropdown.findText(self.sentence_field)
-        if sentence_index != -1:
-            sentence_dropdown.setCurrentIndex(sentence_index)
+        if sentence_index == -1:
+            sentence_index = 0
+        sentence_dropdown.setCurrentIndex(sentence_index)
 
         translation_index = translation_dropdown.findText(self.translation_field)
-        if translation_index != -1:
-            translation_dropdown.setCurrentIndex(translation_index)
+        if translation_index == -1:
+            translation_index = 0
+        translation_dropdown.setCurrentIndex(translation_index)
 
     def clear_layout(self) -> None:
         """Clear all widgets and layouts from a layout.""" 
@@ -312,8 +317,6 @@ class BunAI:
                         font-weight: bold;                   
                     }
                 """)
-
-        print(total_cards)
 
         # If there are no valid cards, return
         if total_cards == 0:
