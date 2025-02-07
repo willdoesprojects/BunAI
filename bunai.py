@@ -209,7 +209,6 @@ class BunAI:
         _, sentence_dropdown = self.create_dropdown_menu("", fields)
         _, translation_dropdown = self.create_dropdown_menu("", fields)
 
-        print("deck: " + self.deck)
         if self.sentence_layout and self.translation_layout:
             self.clear_layout() 
             self.sentence_layout.addWidget(sentence_dropdown)
