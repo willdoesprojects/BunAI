@@ -52,11 +52,13 @@ class BunAI:
 
             self.deck = self.settings.value("deck", "")
             self.language = self.settings.value("language", "")
+
     def setup(self) -> None:
         # Tab Section
         tab_widget = QTabWidget()
         """ General Tab Section """
-        
+        self.sentence_layout = self.translation_layout = None
+
         # Intialize General Tab Layout
         general_tab = QWidget()
         self.general_layout = QVBoxLayout()
@@ -87,37 +89,13 @@ class BunAI:
             if self.deck not in deck_names:
                 self.deck = deck_names[0]
             
-            # Creation of Sentence & Translation Fields
-            deck_id = mw.col.decks.id(self.deck)
-            card_ids = mw.col.decks.cids(deck_id)
+            # Preselection deck from user's last session and create Sentence and Translation Field
+            deck_index = deck_dropdown.findText(self.deck)
+            if deck_index != -1:
+                deck_dropdown.setCurrentIndex(deck_index)
+            self.handle_selection(self.deck)
             
-            card = mw.col.get_card(card_ids[0])
-            note = card.note()
-            model = note.note_type()
-                
-            # Intialization of Sentence and Translation Field
-            fields = [field["name"] for field in model["flds"]]
-            self.sentence_layout, sentence_dropdown = self.create_dropdown_menu("Sentence Field:", fields)
-            self.translation_layout, translation_dropdown = self.create_dropdown_menu("Translation Field:", fields)
-
-            sentence_dropdown.currentTextChanged.connect(self.set_sentence)
-            translation_dropdown.currentTextChanged.connect(self.set_translation)
-
-            self.sentence_field = self.settings.value(f"{self.deck}_sentence_field", "")
-            self.translation_field = self.settings.value(f"{self.deck}_translation_field", "")
-
-            # Preselection of Fields from Previous Sessions
-            sentence_index = sentence_dropdown.findText(self.sentence_field)
-            if sentence_index == -1:
-                sentence_index = 1
-
-            sentence_dropdown.setCurrentIndex(sentence_index)
-
-            translation_index = translation_dropdown.findText(self.translation_field)
-            if translation_index == -1:
-                translation_index = 1
-            translation_dropdown.setCurrentIndex(translation_index)
-
+            deck_dropdown.currentTextChanged.connect(self.handle_selection)
             # Creation Diffuclty Dropdowns
             mode = ["Beginner", "Normal", "Complex"] 
             self.diffculty_mode_layout, diffculty_mode_dropdown  = self.create_dropdown_menu("Diffculty Setting:", mode)
@@ -127,13 +105,9 @@ class BunAI:
 
             diffculty_index = diffculty_mode_dropdown.findText(self.diffculty)
             if diffculty_index != -1:
-                diffculty_mode_dropdown.setCurrentIndex(diffculty_index)
+                diffculty_index = 1
+            diffculty_mode_dropdown.setCurrentIndex(diffculty_index)
 
-            # Preselection deck from user's last session
-            deck_index = deck_dropdown.findText(self.deck)
-            if deck_index != -1:
-                deck_dropdown.setCurrentIndex(deck_index)
-            deck_dropdown.currentTextChanged.connect(self.handle_selection) 
 
             # Button to Generate Sentences
             generate_button = QPushButton("Generate Sentences!")
@@ -196,6 +170,7 @@ class BunAI:
         layout.addWidget(close_button)
         dialog.setLayout(layout)
         dialog.exec()
+
     
     def set_language(self) -> None:
         self.language = self.language_input_field.text()
@@ -218,8 +193,6 @@ class BunAI:
         self.settings.setValue("openai_api_key", self.api_key)
 
     def handle_selection(self, text: str) -> None:  
-        self.clear_layout() 
-
         self.deck = text
         self.settings.setValue("deck", self.deck)
 
@@ -233,13 +206,19 @@ class BunAI:
         # Get the fields from the model
         fields = [field["name"] for field in model["flds"]]
 
-        # Reintilization of the Sentence and Dropdown Menus with Preselection
         _, sentence_dropdown = self.create_dropdown_menu("", fields)
         _, translation_dropdown = self.create_dropdown_menu("", fields)
 
-        self.sentence_layout.addWidget(sentence_dropdown)
-        self.translation_layout.addWidget(translation_dropdown)
-
+        print("deck: " + self.deck)
+        if self.sentence_layout and self.translation_layout:
+            self.clear_layout() 
+            self.sentence_layout.addWidget(sentence_dropdown)
+            self.translation_layout.addWidget(translation_dropdown)
+        else:
+            self.sentence_layout, sentence_dropdown = self.create_dropdown_menu("Sentence Field:", fields) 
+            self.translation_layout, translation_dropdown = self.create_dropdown_menu("Translation Field:", fields)
+        
+        # Reintilization of the Sentence and Dropdown Menus with Preselection
         sentence_dropdown.currentTextChanged.connect(self.set_sentence)
         translation_dropdown.currentTextChanged.connect(self.set_translation)
 
