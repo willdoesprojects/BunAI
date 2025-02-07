@@ -29,6 +29,7 @@
 #
 # Any modifications to this file must keep this entire header intact.
 
+from typing import List
 from aqt import mw
 from aqt.qt import (QSettings, QAction, QWidget, QTabWidget, QVBoxLayout, 
                     QLabel, QPushButton, QHBoxLayout, QLineEdit, QDialog, 
@@ -50,10 +51,6 @@ class BunAI:
             mw.form.menuTools.addAction(self.menu_action)
 
             self.deck = self.settings.value("deck", "")
-
-            self.sentence_field = self.settings.value(f"{self.deck}_sentence_field", "")
-            self.translation_field = self.settings.value(f"{self.deck}_translation_field", "")
-            self.diffculty = self.settings.value(f"{self.deck}_diffculty_field", "")
             self.language = self.settings.value("language", "")
     def setup(self) -> None:
         # Tab Section
@@ -79,58 +76,64 @@ class BunAI:
         # If no decks or decks with any fields exisit, then no layouts will present it self 
         if not deck_names:
             self.general_layout.addWidget(QLabel("You either have no Decks or no Decks with Any Fields! Please either create Decks or create Fields to get Started!"))
+            return
+        
         # Proceed with Adding the Deck Dropdown, Sentence Field Dropdown, Translation Field Dropdown, and Diffculty Dropdown 
         else:
             self.general_layout.addWidget(QLabel("Welcome to Bun AI!"))
-            deck_dropdown, _ = self.create_dropdown_menu("Deck:", deck_names, self.general_layout)
-            deck_dropdown.currentTextChanged.connect(self.handle_selection) 
-
-            deck_id = mw.col.decks.id(deck_names[0])
+            _, deck_dropdown = self.create_dropdown_menu("Deck:", deck_names)
+            
+            # If the deck is deleted, automatically sets it to the first one
+            if self.deck not in deck_names:
+                self.deck = deck_names[0]
+            
+            # Creation of Sentence & Translation Fields
+            deck_id = mw.col.decks.id(self.deck)
             card_ids = mw.col.decks.cids(deck_id)
             
             card = mw.col.get_card(card_ids[0])
             note = card.note()
             model = note.note_type()
-            
-            # Get the fields from the model
+                
+            # Intialization of Sentence and Translation Field
             fields = [field["name"] for field in model["flds"]]
-            
-            self.sentence_dropdown, self.sentence_layout = self.create_dropdown_menu("Sentence Field:", fields, self.general_layout)
-            self.translation_dropdown, self.translation_layout = self.create_dropdown_menu("Translation Field:", fields, self.general_layout)
+            self.sentence_layout, sentence_dropdown = self.create_dropdown_menu("Sentence Field:", fields)
+            self.translation_layout, translation_dropdown = self.create_dropdown_menu("Translation Field:", fields)
 
-            # Diffculty Mode
+            sentence_dropdown.currentTextChanged.connect(self.set_sentence)
+            translation_dropdown.currentTextChanged.connect(self.set_translation)
+
+            self.sentence_field = self.settings.value(f"{self.deck}_sentence_field", "")
+            self.translation_field = self.settings.value(f"{self.deck}_translation_field", "")
+
+            sentence_index = sentence_dropdown.findText(self.sentence_field)
+            if sentence_index != -1:
+                sentence_dropdown.setCurrentIndex(sentence_index)
+
+            translation_index = translation_dropdown.findText(self.translation_field)
+            if translation_index != -1:
+                translation_dropdown.setCurrentIndex(translation_index)
+
+            # Creation Diffuclty Dropdowns
             mode = ["Beginner", "Normal", "Complex"] 
+            self.diffculty_mode_layout, diffculty_mode_dropdown  = self.create_dropdown_menu("Diffculty Setting:", mode)
             
-            self.diffculty_mode_dropdown, _ = self.create_dropdown_menu("Diffculty Setting:", mode, self.general_layout)
-            
-            # Preselecting the option from user's last session
+            diffculty_mode_dropdown.currentTextChanged.connect(self.set_diffculty)
+            self.diffculty = self.settings.value(f"diffculty_field", "")
 
+            diffculty_index = diffculty_mode_dropdown.findText(self.diffculty)
+            if diffculty_index != -1:
+                diffculty_mode_dropdown.setCurrentIndex(diffculty_index)
+
+            # Preselection deck from user's last session
             deck_index = deck_dropdown.findText(self.deck)
             if deck_index != -1:
                 deck_dropdown.setCurrentIndex(deck_index)
-
-            sentence_index = self.sentence_dropdown.findText(self.sentence_field)
-            if sentence_index != -1:
-                self.sentence_dropdown.setCurrentIndex(sentence_index)
-
-            translation_index = self.translation_dropdown.findText(self.translation_field)
-            if translation_index != -1:
-                self.translation_dropdown.setCurrentIndex(translation_index)
-
-            diffculty_index = self.diffculty_mode_dropdown.findText(self.diffculty)
-            if diffculty_index != -1:
-                self.diffculty_mode_dropdown.setCurrentIndex(diffculty_index)
-
-            # Connect the Dropdown Menus
-
-            self.sentence_dropdown.currentTextChanged.connect(self.set_sentence)
-            self.translation_dropdown.currentTextChanged.connect(self.set_translation)
-            self.diffculty_mode_dropdown.currentTextChanged.connect(self.set_diffculty)
+            deck_dropdown.currentTextChanged.connect(self.handle_selection) 
 
             # Button to Generate Sentences
             generate_button = QPushButton("Generate Sentences!")
             generate_button.clicked.connect(self.popup_generate_window)
-
             self.general_layout.addWidget(generate_button)
         
         """ Advanced Tab """
@@ -156,7 +159,6 @@ class BunAI:
         self.key_input_field.editingFinished.connect(self.save_key)
 
         key_layout.addWidget(self.key_input_field)
-
         self.advanced_layout.addLayout(key_layout)
         
         # Language Section
@@ -181,7 +183,6 @@ class BunAI:
         dialog = QDialog(self.mw)
         dialog.setWindowTitle("BunAI")
         layout = QVBoxLayout()
-        
 
         # Adding Tab Widget
         layout.addWidget(tab_widget)
@@ -192,30 +193,30 @@ class BunAI:
         dialog.setLayout(layout)
         dialog.exec()
     
-    def set_language(self):
+    def set_language(self) -> None:
         self.language = self.language_input_field.text()
         self.settings.setValue("language", self.language)
 
-    def set_diffculty(self, field):
+    def set_diffculty(self, field: str) -> None:
         self.diffculty = field
-        self.settings.setValue(f"{self.deck}_diffculty_field", self.diffculty)
+        self.settings.setValue(f"diffculty_field", self.diffculty)
 
-    def set_sentence(self, field):
+    def set_sentence(self, field: str) -> None:
         self.sentence_field = field
         self.settings.setValue(f"{self.deck}_sentence_field", self.sentence_field)
 
-    def set_translation(self, field):
+    def set_translation(self, field: str) -> None:
         self.translation_field = field
         self.settings.setValue(f"{self.deck}_translation_field", self.translation_field)
 
-    def save_key(self):
+    def save_key(self) -> None:
         self.api_key = self.key_input_field.text()
         self.settings.setValue("openai_api_key", self.api_key)
 
-    def handle_selection(self, text):     
+    def handle_selection(self, text: str) -> None:  
         self.clear_layout() 
-        self.deck = text
 
+        self.deck = text
         self.settings.setValue("deck", self.deck)
 
         deck_id = mw.col.decks.id(text)
@@ -227,69 +228,74 @@ class BunAI:
             
         # Get the fields from the model
         fields = [field["name"] for field in model["flds"]]
-        
-        sentence_dropdown = QComboBox()
-        sentence_dropdown.addItems(fields)
-        sentence_dropdown.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        translation_dropdown = QComboBox()
-        translation_dropdown.addItems(fields)
-        translation_dropdown.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        
-        self.sentence_dropdown = sentence_dropdown 
-        self.translation_dropdown = translation_dropdown
-        
-        self.sentence_layout.addWidget(self.sentence_dropdown)
-        self.translation_layout.addWidget(self.translation_dropdown)
+        # Reintilization of the Sentence and Dropdown Menus with Preselection
+        _, sentence_dropdown = self.create_dropdown_menu("", fields)
+        _, translation_dropdown = self.create_dropdown_menu("", fields)
 
-        self.sentence_dropdown.currentTextChanged.connect(self.set_sentence)
-        self.translation_dropdown.currentTextChanged.connect(self.set_translation)
+        self.sentence_layout.addWidget(sentence_dropdown)
+        self.translation_layout.addWidget(translation_dropdown)
 
-    def clear_layout(self):
-        """Clear all widgets and layouts from a layout."""
-        self.sentence_dropdown.setParent(None)
-        self.translation_dropdown.setParent(None)
+        sentence_dropdown.currentTextChanged.connect(self.set_sentence)
+        translation_dropdown.currentTextChanged.connect(self.set_translation)
+
+        self.sentence_field = self.settings.value(f"{self.deck}_sentence_field", "")
+        self.translation_field = self.settings.value(f"{self.deck}_translation_field", "")
+
+        sentence_index = sentence_dropdown.findText(self.sentence_field)
+        if sentence_index != -1:
+            sentence_dropdown.setCurrentIndex(sentence_index)
+
+        translation_index = translation_dropdown.findText(self.translation_field)
+        if translation_index != -1:
+            translation_dropdown.setCurrentIndex(translation_index)
+
+    def clear_layout(self) -> None:
+        """Clear all widgets and layouts from a layout.""" 
+        old_sentence_dropdown = self.sentence_layout.takeAt(1)
+        if old_sentence_dropdown and old_sentence_dropdown.widget():
+            old_sentence_dropdown.widget().deleteLater()
         
-    def create_dropdown_menu(self, label_name, item_names, layout):
+        old_translation_dropdown = self.translation_layout.takeAt(1)
+        if old_translation_dropdown and old_translation_dropdown.widget():
+            old_translation_dropdown.widget().deleteLater()
+
+        
+    def create_dropdown_menu(self, label_name: str, item_names: List[str]) -> None:
         # Deck Field & Dropdown Menu
-        deck_layout = QHBoxLayout()
-        deck_label = QLabel(f"{label_name}")
-        deck_layout.addWidget(deck_label)
+        dropdown_layout = QHBoxLayout()
+        dropdown_label = QLabel(f"{label_name}")
+        dropdown_layout.addWidget(dropdown_label)
 
         # Dropdown Menu
-        deck_dropdown = QComboBox()
-        deck_dropdown.addItems(item_names)
-        deck_dropdown.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        dropdown_menu = QComboBox()
+        dropdown_menu.addItems(item_names)
+        dropdown_menu.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        deck_layout.addWidget(deck_dropdown)
-
-        layout.addLayout(deck_layout)
+        dropdown_layout.addWidget(dropdown_menu)
         
-        return deck_dropdown, deck_layout
+        if label_name:
+            self.general_layout.addLayout(dropdown_layout)
+
+        return dropdown_layout, dropdown_menu
     
-    def popup_generate_window(self):
-        deck_id = mw.col.decks.id("test")
+    def popup_generate_window(self) -> None:
+        """ Popup Window for Generating Sentences """
+
+        # Obtain the cards from the desired fields from the desired deck
+        deck_id = mw.col.decks.id(self.deck)
         card_ids = mw.col.decks.cids(deck_id)
         notes = []
-        curr = 0
         for card_id in card_ids:
             card = mw.col.get_card(card_id)
             note = card.note()
 
-            note[self.sentence_field] = "" 
-            note[self.translation_field] = ""
-
-            notes.append(note)
-
-            if curr == 15:
-                break
-            curr += 1
-
+            #Both fields must be empty in order to enact change on the card
             if not note[self.sentence_field] and not note[self.translation_field]:
                 notes.append(note)
 
         total_cards = len(notes)
-        """ Frontend Side """
+        
         # Creation & Intialization of Popup Window for Generating Sentences
         popup_window = QDialog(self.mw)
         popup_window.setWindowTitle("Bun Sentence Generation")
@@ -300,9 +306,41 @@ class BunAI:
         layout = QVBoxLayout()
         popup_window.setLayout(layout)
 
-        # Intialization of Main Label
-        label = QLabel("Generating Sentences:")
-        layout.addWidget(label)
+        main_label = QLabel("")
+        main_label.setStyleSheet("""
+                    QLabel {
+                        font-weight: bold;                   
+                    }
+                """)
+
+        print(total_cards)
+
+        # If there are no valid cards, return
+        if total_cards == 0:
+            main_label.setText("All of your card(s)'s fields are filled!")
+            layout.addWidget(main_label)
+
+            action_button = QPushButton("Close")
+            action_button.clicked.connect(popup_window.reject)
+            layout.addWidget(action_button)
+
+            popup_window.show() 
+            return
+
+        # If there is no language specified by the user, return
+        if not self.language:
+            main_label.setText("Language not specified! Please go to \"Advanced -> Language\" and enter desired language!")
+            layout.addWidget(main_label)
+
+            action_button = QPushButton("Close")
+            action_button.clicked.connect(popup_window.reject)
+            layout.addWidget(action_button)
+
+            popup_window.show() 
+            return
+        
+        main_label.setText("Welcome! Press \"Start\" to Begin!")
+        layout.addWidget(main_label)
 
         # Intialization of Progress Bar
         progress_layout = QHBoxLayout()
@@ -319,11 +357,14 @@ class BunAI:
 
         layout.addLayout(progress_layout)
 
+        # Creation of Generate Button
         action_button = QPushButton("Start")
         layout.addWidget(action_button)
+
         """ Backend Side """
         tries = 0
 
+        # Inserting CSS into each card for highlight words
         custom_css = ".defined-word {}"
         model = mw.col.models.current()
         if "defined-word" not in model["css"]:
@@ -331,6 +372,7 @@ class BunAI:
             mw.col.models.save(model)
             mw.reset()
 
+        # Function updates the progress bar
         def update_progress_bar():
             nonlocal current_progress
             current_progress += 1
@@ -341,31 +383,24 @@ class BunAI:
 
             QApplication.processEvents()
 
-            if percentage == 100:
+            if current_progress == total_cards:
                 action_button.setEnabled(True)
                 action_button.setText("Close")
                 action_button.clicked.disconnect()
                 action_button.clicked.connect(popup_window.reject)
                 
-                label.setText("Generation Complete!")
+                main_label.setText("Generation Complete!")
                 print(f"Total time: {time.time() - self.time:.2f} seconds")
-
-        def error(error_msg, i):
+        
+        # Error detection function
+        def error(error_msg: str, i: int):
             nonlocal tries
             if tries == 10 and not self.stop_event.is_set():
                 self.stop_event.set()
-                label.setParent(None)
                 progress_bar.setParent(None)
                 progress_label.setParent(None)
-        
-                error_label = QLabel(f"{error_msg}")
-                error_label.setStyleSheet("""
-                    QLabel {
-                        font-weight: bold;
-                        text-align: center;                      
-                    }
-                """)
-                progress_layout.addWidget(error_label)
+
+                main_label.setText(error_msg)
 
                 action_button.setEnabled(True)
                 action_button.setText("Close")
@@ -373,7 +408,10 @@ class BunAI:
                 action_button.clicked.connect(popup_window.reject)
             else:
                 tries += i
-        def run():
+        
+        # Starts the thread to generate the sentence
+        def run() -> None:
+            main_label.setText("Generation in Progress:")
             self.time = time.time()
             action_button.setEnabled(False)
             pool = QThreadPool.globalInstance()
