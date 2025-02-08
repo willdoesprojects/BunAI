@@ -49,8 +49,9 @@ class WorkerSignals(QObject):
     error_signal = pyqtSignal(str, int)
 
 class SentenceWorker(QRunnable):
-    def __init__(self, note: Note, api_key: str, diffculty: str, sentence_field: str, translation_field: str, error_flag: threading.Event, language: str) -> None:
+    def __init__(self, expression: str, note: Note, api_key: str, diffculty: str, sentence_field: str, translation_field: str, error_flag: threading.Event, language: str) -> None:
         super().__init__()
+        self.expression = expression
         self.note = note
         self.api_key = api_key
         self.diffculty = diffculty
@@ -66,7 +67,7 @@ class SentenceWorker(QRunnable):
         client = OpenAI(api_key=self.api_key)
 
         try:
-            target_word = BeautifulSoup(self.note["Expression"], "html.parser").get_text()
+            target_word = BeautifulSoup(self.note[self.expression], "html.parser").get_text()
 
             response = client.chat.completions.create(
                 model = "gpt-4o-mini",

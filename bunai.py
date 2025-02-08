@@ -206,6 +206,9 @@ class BunAI:
         # Get the fields from the model
         fields = [field["name"] for field in model["flds"]]
 
+        # Using Front of the Card as the basis of the Word to use in Translation
+        self.expression = fields[0]
+
         _, sentence_dropdown = self.create_dropdown_menu("", fields)
         _, translation_dropdown = self.create_dropdown_menu("", fields)
 
@@ -402,7 +405,7 @@ class BunAI:
             for note in notes:
                 if self.stop_event.is_set():
                     break
-                generate = sentence_worker.SentenceWorker(note, self.api_key, self.diffculty, self.sentence_field, self.translation_field, self.stop_event, self.language)
+                generate = sentence_worker.SentenceWorker(self.expression, note, self.api_key, self.diffculty, self.sentence_field, self.translation_field, self.stop_event, self.language)
                 generate.signals.complete_signal.connect(update_progress_bar)
                 generate.signals.error_signal.connect(error)
                 pool.start(generate)
